@@ -3,8 +3,8 @@ step 1: clone repo
 -> cd satellite-monitor-BE
 
 step 2: cài đặt virtualenv
--> pip install virtualenv
--> virtualenv venv
+-> pip install virtualenv (nếu lỗi) -> pip install --user pipenv -> pip install virtualenv
+-> virtualenv venv (nếu lỗi) -> python -m venv venv
 
 step 3: chạy môi trường ảo (nếu lỗi -> step 4)
 (cmd) -> venv\Scripts\activate.bat
