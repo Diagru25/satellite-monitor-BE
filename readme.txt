@@ -4,7 +4,7 @@ step 1: clone repo
 
 step 2: cài đặt virtualenv
 -> pip install virtualenv
--> python virtualenv venv
+-> virtualenv venv
 
 step 3: chạy môi trường ảo (nếu lỗi -> step 4)
 (cmd) -> venv\Scripts\activate.bat
