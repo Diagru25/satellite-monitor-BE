@@ -7,12 +7,13 @@ from flask_pymongo import PyMongo
 from bson import json_util
 from bson.objectid import ObjectId
 from flask_cors import CORS
-
+from pymongo import MongoClient
 app = Flask(__name__)
-app.config["MONGO_URI"] = 'mongodb://localhost:27017/flaskDB'
-CORS(app)
-
-mongo = PyMongo(app)
+# app.config["MONGO_URI"] = 'mongodb://localhost:27017/flaskDB'
+# CORS(app)
+client = MongoClient("mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/satellite?retryWrites=true&w=majority",ssl=True,ssl_cert_reqs='CERT_NONE')
+mongo = client.get_database("satellite")
+# mongo = PyMongo(app)
 
 # @app.route('/users', methods=['POST'])
 # def create_user():
@@ -46,31 +47,34 @@ mongo = PyMongo(app)
 
 @app.route('/satellites', methods=['GET'])
 def get_all_satellites():
-    satellites = mongo.db.satellites.find()
-    response = json_util.dumps(satellites)
+    satellites = mongo.full
+    # print(satellites.find())
+    response = json_util.dumps(satellites.find())
     return Response(response, mimetype='application/json')
 
 
 @app.route('/satellites/<id>', methods=['GET'])
 def get_one_satellite(id):
-    satellite = mongo.db.satellites.find_one({'NORAD Number': id})
+    satellite = mongo.full.find_one({'NORAD Number': id})
     response = json_util.dumps(satellite)
     return Response(response, mimetype='application/json')
 
 
 @app.route('/satellites/track-all', methods=['POST'])
 def satellite_track_all():
-
+    
     try:
         url = 'http://celestrak.com/NORAD/elements/active.txt'
         file = urllib.request.urlopen(url).read().splitlines()
 
         obs = ephem.Observer()
+        print(request.json)
         obs.lat = request.json['lat']
         obs.long = request.json['long']
 
         time1_input = request.json['time_start']
         time2_input = request.json['time_end']
+        print(time1_input)
 
         time1 = datetime.datetime.strptime(time1_input, '%Y-%m-%d %H:%M:%S')
         time2 = datetime.datetime.strptime(time2_input, '%Y-%m-%d %H:%M:%S')
@@ -80,7 +84,7 @@ def satellite_track_all():
         t1 = ephem.Date(timeutc1-7*ephem.hour)
         t2 = ephem.Date(timeutc2-7*ephem.hour)
         a = ephem.degrees('10:00:00')
-
+        
         result = []
         k = 0
         for id in range(0, len(file), 3):
@@ -119,12 +123,14 @@ def satellite_track_all():
                         })
                     else:
                         obs.date = ts
-            except (ValueError, TypeError):
+            except  Exception as e:
+                print(e)
                 continue
         response = json_util.dumps(result)
         return Response(response, mimetype='application/json')
 
-    except:
+    except Exception as e:
+        print(e)
         return json_util.dumps({
             'message': 'error'
         })
