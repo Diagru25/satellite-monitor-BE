@@ -8,6 +8,7 @@ from bson import json_util
 from bson.objectid import ObjectId
 from flask_cors import CORS
 from pymongo import MongoClient
+import json
 app = Flask(__name__)
 # app.config["MONGO_URI"] = 'mongodb://localhost:27017/flaskDB'
 CORS(app)
@@ -55,10 +56,14 @@ def get_all_satellites():
 
 @app.route('/satellites/<id>', methods=['GET'])
 def get_one_satellite(id):
-    satellite = mongo.full.find_one({'NORAD Number': id})
-    response = json_util.dumps(satellite)
+    satellites = mongo.full
+    response = json_util.dumps(satellites.find_one({'NORAD Number': int(id)}))
     return Response(response, mimetype='application/json')
-
+# @app.route('/satellites/<name>', methods=['GET'])
+# def get_one_satellite(name):
+#     satellites = mongo.full
+#     response = json_util.dumps(satellites.find_one({'Official Name': name}))
+#     return Response(response, mimetype='application/json')
 
 @app.route('/satellites/track-all', methods=['POST'])
 def satellite_track_all():
@@ -68,13 +73,11 @@ def satellite_track_all():
         file = urllib.request.urlopen(url).read().splitlines()
 
         obs = ephem.Observer()
-        print(request.json)
         obs.lat = request.json['lat']
         obs.long = request.json['long']
 
         time1_input = request.json['time_start']
         time2_input = request.json['time_end']
-        print(time1_input)
 
         time1 = datetime.datetime.strptime(time1_input, '%Y-%m-%d %H:%M:%S')
         time2 = datetime.datetime.strptime(time2_input, '%Y-%m-%d %H:%M:%S')
@@ -92,6 +95,8 @@ def satellite_track_all():
                                 file[id + 1].decode('utf-8'),
                                 file[id + 2].decode('utf-8'))
             obs.date = datetime.datetime.utcnow()
+            id_str = file[id+2].decode('utf-8')[2:7] # lay ra id dang chuoi
+            id_int = int(id_str) # doi id sang dang integer
             try:
                 while obs.date < t2:
                     tr, azr, tt, altt, ts, azs = obs.next_pass(stl)
@@ -108,6 +113,7 @@ def satellite_track_all():
                             trvn = ephem.Date(x + 7 * ephem.hour)
 
                             coordinates.append({
+                                "id": id_int,
                                 "trvn": trvn,
                                 "alt": math.degrees(stl.alt),
                                 "az": math.degrees(stl.az),
