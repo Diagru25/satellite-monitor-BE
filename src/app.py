@@ -10,7 +10,7 @@ from flask_cors import CORS
 from pymongo import MongoClient
 app = Flask(__name__)
 # app.config["MONGO_URI"] = 'mongodb://localhost:27017/flaskDB'
-# CORS(app)
+CORS(app)
 client = MongoClient("mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/satellite?retryWrites=true&w=majority",ssl=True,ssl_cert_reqs='CERT_NONE')
 mongo = client.get_database("satellite")
 # mongo = PyMongo(app)
