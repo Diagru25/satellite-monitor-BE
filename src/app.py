@@ -117,13 +117,13 @@ def satellite_track_all():
                             trvn = ephem.Date(x + 7 * ephem.hour)
                             locator = Nominatim(user_agent='myGeocoder')
                             coor = (Point(stl.sublat,stl.sublong))
-                            # location = locator.reverse(coor)                            
+                            location = locator.reverse(coor)                            
                             str_trvn = "%s" % (trvn)
-                            # print(location)
+                            print(location)
                             try:
-                                # location_vi = GoogleTranslator(source='auto', target='vi').translate(location.address)
-                                # if location == None:
-                                #     raise AttributeError
+                                location_vi = GoogleTranslator(source='auto', target='vi').translate(location.address)
+                                if location == None:
+                                    raise AttributeError
                                 coordinates.append({
                                     "id": id_int,
                                     "trvn": str_trvn,
@@ -133,7 +133,7 @@ def satellite_track_all():
                                     "long": math.degrees(stl.sublong),
                                     "elevation": stl.elevation / 1000,
                                     "range": stl.range / 1000,
-                                    "location": ""
+                                    "location": location_vi
                                 })
                             except AttributeError:
                                 coordinates.append({
