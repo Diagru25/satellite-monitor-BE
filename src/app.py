@@ -1,4 +1,5 @@
 import math
+from threading import ThreadError
 import ephem
 import datetime
 import urllib.request
@@ -8,6 +9,9 @@ from bson import json_util
 from bson.objectid import ObjectId
 from flask_cors import CORS
 from pymongo import MongoClient
+from geopy.geocoders import Nominatim
+from geopy.point import Point
+from deep_translator import GoogleTranslator
 import json
 app = Flask(__name__)
 # app.config["MONGO_URI"] = 'mongodb://localhost:27017/flaskDB'
@@ -111,18 +115,38 @@ def satellite_track_all():
                             obs.date = x
                             stl.compute(obs)
                             trvn = ephem.Date(x + 7 * ephem.hour)
-
-                            coordinates.append({
-                                "id": id_int,
-                                "trvn": trvn,
-                                "alt": math.degrees(stl.alt),
-                                "az": math.degrees(stl.az),
-                                "lat": math.degrees(stl.sublat),
-                                "long": math.degrees(stl.sublong),
-                                "elevation": stl.elevation / 1000,
-                                "range": stl.range / 1000
-                            })
-
+                            locator = Nominatim(user_agent='myGeocoder')
+                            coor = (Point(stl.sublat,stl.sublong))
+                            # location = locator.reverse(coor)                            
+                            str_trvn = "%s" % (trvn)
+                            # print(location)
+                            try:
+                                # location_vi = GoogleTranslator(source='auto', target='vi').translate(location.address)
+                                # if location == None:
+                                #     raise AttributeError
+                                coordinates.append({
+                                    "id": id_int,
+                                    "trvn": str_trvn,
+                                    "alt": math.degrees(stl.alt),
+                                    "az": math.degrees(stl.az),
+                                    "lat": math.degrees(stl.sublat),
+                                    "long": math.degrees(stl.sublong),
+                                    "elevation": stl.elevation / 1000,
+                                    "range": stl.range / 1000,
+                                    "location": ""
+                                })
+                            except AttributeError:
+                                coordinates.append({
+                                    "id": id_int,
+                                    "trvn": str_trvn,
+                                    "alt": math.degrees(stl.alt),
+                                    "az": math.degrees(stl.az),
+                                    "lat": math.degrees(stl.sublat),
+                                    "long": math.degrees(stl.sublong),
+                                    "elevation": stl.elevation / 1000,
+                                    "range": stl.range / 1000,
+                                    "location": ""
+                                })
                         result.append({
                             "name": name_sate,
                             "coordinate": coordinates
