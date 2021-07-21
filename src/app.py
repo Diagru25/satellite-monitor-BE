@@ -11,6 +11,7 @@ from flask_cors import CORS
 from pymongo import MongoClient
 from geopy.geocoders import Nominatim
 from geopy.point import Point
+import geopy.geocoders
 from deep_translator import GoogleTranslator
 import json
 app = Flask(__name__)
@@ -71,7 +72,7 @@ def get_one_satellite(id):
 
 @app.route('/satellites/track-all', methods=['POST'])
 def satellite_track_all():
-    
+    geopy.geocoders.options.default_timeout = 7
     try:
         url = 'http://celestrak.com/NORAD/elements/active.txt'
         file = urllib.request.urlopen(url).read().splitlines()
@@ -116,7 +117,7 @@ def satellite_track_all():
                             stl.compute(obs)
                             trvn = ephem.Date(x + 7 * ephem.hour)
                             locator = Nominatim(user_agent='myGeocoder')
-                            coor = (Point(stl.sublat,stl.sublong))
+                            coor = (Point( math.degrees(stl.sublat),math.degrees(stl.sublong)))
                             location = locator.reverse(coor)                            
                             str_trvn = "%s" % (trvn)
                             print(location)
