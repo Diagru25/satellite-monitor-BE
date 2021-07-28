@@ -1,59 +1,43 @@
 import math
-from threading import ThreadError
+from dns.rdatatype import NULL
+# from threading import ThreadError
 import ephem
 import datetime
 import urllib.request
 from flask import Flask, request, Response
-from flask_pymongo import PyMongo
+# from flask_pymongo import PyMongo
 from bson import json_util
-from bson.objectid import ObjectId
+# from bson.objectid import ObjectId
 from flask_cors import CORS
 from pymongo import MongoClient
-from geopy.geocoders import Nominatim
-from geopy.point import Point
-import geopy.geocoders
-from deep_translator import GoogleTranslator
-import json
+# from geopy.geocoders import Nominatim
+# from geopy.point import Point
+# import geopy.geocoders
+# from deep_translator import GoogleTranslator
+# Import for subprocess
+import csv
+import os
+import subprocess
+import base64
+import psutil
+
+pid = 0
+url = 'http://celestrak.com/NORAD/elements/active.txt' # Satellite Database online
+dbUrl = "mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/satellite?retryWrites=true&w=majority"
+dbName = "satellite"
+collName = "full"
+header= ["Official Name","NORAD Number","Nation","Operator","Users","Application","Detailed Purpose","Orbit","Class of Orbit","Type of Orbit","Period (minutes)","Mass (kg)","COSPAR Number","Date of Launch","Expected Lifetime (yrs)","Equipment","Describe"]
+pid = 0
 app = Flask(__name__)
 # app.config["MONGO_URI"] = 'mongodb://localhost:27017/flaskDB'
 CORS(app)
-client = MongoClient("mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/satellite?retryWrites=true&w=majority",ssl=True,ssl_cert_reqs='CERT_NONE')
-mongo = client.get_database("satellite")
-# mongo = PyMongo(app)
-
-# @app.route('/users', methods=['POST'])
-# def create_user():
-#     name = request.json['name']
-
-#     if name:
-#         id = mongo.db.users.insert({
-#             'name': name
-#         })
-#         response = {
-#             '_id': str(id),
-#             'name': name
-#         }
-#         return response
-#     else:
-#         return {'message': 'error'}
-#     return {'message': 'received'}
-
-# @app.route('/users', methods=['GET'])
-# def findAll():
-#     entities = mongo.db.users.find()
-#     res = json_util.dumps(entities)
-#     return Response(res, mimetype='application/json')
-
-# @app.route('/users/<id>', methods = ['GET'])
-# def getOne(id):
-#     entity = mongo.db.users.find_one({'_id': ObjectId(id)})
-#     res = json_util.dumps(entity)
-#    return Response(res, mimetype='application/json')
+client = MongoClient(dbUrl, ssl=True, ssl_cert_reqs='CERT_NONE')
+mongo = client.get_database(dbName)
 
 
 @app.route('/satellites', methods=['GET'])
 def get_all_satellites():
-    satellites = mongo.full
+    satellites = mongo[collName]
     # print(satellites.find())
     response = json_util.dumps(satellites.find())
     return Response(response, mimetype='application/json')
@@ -61,7 +45,7 @@ def get_all_satellites():
 
 @app.route('/satellites/<id>', methods=['GET'])
 def get_one_satellite(id):
-    satellites = mongo.full
+    satellites = mongo[collName]
     response = json_util.dumps(satellites.find_one({'NORAD Number': int(id)}))
     return Response(response, mimetype='application/json')
 # @app.route('/satellites/<name>', methods=['GET'])
@@ -72,11 +56,10 @@ def get_one_satellite(id):
 
 @app.route('/satellites/track-all', methods=['POST'])
 def satellite_track_all():
-    geopy.geocoders.options.default_timeout = 7
+    # geopy.geocoders.options.default_timeout = 7
     try:
         url = 'http://celestrak.com/NORAD/elements/active.txt'
         file = urllib.request.urlopen(url).read().splitlines()
-
         obs = ephem.Observer()
         obs.lat = request.json['lat']
         obs.long = request.json['long']
@@ -116,15 +99,15 @@ def satellite_track_all():
                             obs.date = x
                             stl.compute(obs)
                             trvn = ephem.Date(x + 7 * ephem.hour)
-                            locator = Nominatim(user_agent='myGeocoder')
-                            coor = (Point( math.degrees(stl.sublat),math.degrees(stl.sublong)))
-                            location = locator.reverse(coor)                            
+                            # locator = Nominatim(user_agent='myGeocoder')
+                            # coor = (Point( math.degrees(stl.sublat),math.degrees(stl.sublong)))
+                            # location = locator.reverse(coor)                            
                             str_trvn = "%s" % (trvn)
-                            print(location)
+                            # print(location)
                             try:
-                                location_vi = GoogleTranslator(source='auto', target='vi').translate(location.address)
-                                if location == None:
-                                    raise AttributeError
+                                # location_vi = GoogleTranslator(source='auto', target='vi').translate(location.address)
+                                # if location == None:
+                                #     raise AttributeError
                                 coordinates.append({
                                     "id": id_int,
                                     "trvn": str_trvn,
@@ -134,7 +117,7 @@ def satellite_track_all():
                                     "long": math.degrees(stl.sublong),
                                     "elevation": stl.elevation / 1000,
                                     "range": stl.range / 1000,
-                                    "location": location_vi
+                                    # "location": location_vi
                                 })
                             except AttributeError:
                                 coordinates.append({
@@ -166,5 +149,75 @@ def satellite_track_all():
             'message': 'error'
         })
 
+count = 0 # Biến đếm số bản ghi, sử dụng ở phạm vi GLOBAL
+def mongoImport(csvPath, dbName=dbName, collName=collName, dbUrl=dbUrl):
+    """ Imports a csv file at path csvPath to a mongo collection
+    returns: count of the documents in the new collection
+    """
+    client = MongoClient(dbUrl, ssl=True, ssl_cert_reqs='CERT_NONE')
+    db = client[dbName]
+    coll = db[collName]
+    csvFile = open(csvPath)
+    reader = csv.DictReader(csvFile)
+    global count # Khai báo sử dụng biến global
+    for each in reader:
+        row={}
+        for field in header:
+            row[field]= " ".join(each[field].split())
+        print(row)
+        coll.insert(row)
+        count+=1
+
+
+@app.route('/satellites/update-database', methods=['POST'])
+def update_database():
+    global pid
+    if pid == 0:
+        try:        
+            global count # Khai báo sử dụng biến global
+            count = 0
+            process = subprocess.Popen('python update_db.py')
+            pid = process.pid            
+            print(pid)
+            stdout, stderr = process.communicate()
+            if (stderr != None):
+                raise Exception
+            # process.wait()            
+            mongoImport(csvPath='updated_data.csv')
+        except Exception as ex:
+            if (stderr != None):                
+                print(stderr)
+                errMess = base64.b64encode(stderr).decode('utf-8')
+            else:
+                errMess = ex
+            print(errMess)
+            response = json_util.dumps({'status': False, 'count': count, 'message':errMess})
+            return Response(response, mimetype='application/json')
+        response = json_util.dumps({'status': True, 'count': count, 'message':''})
+        return Response(response, mimetype='application/json')
+    response = json_util.dumps({'status': False, 'count': count, 'message':'Đang cập nhật!'})
+    return Response(response, mimetype='application/json')
+
+@app.route('/satellites/stop-update-database', methods=['POST'])
+def stop_update_database():
+    global pid    
+    print(pid)  
+    if pid != 0:
+        try:
+            current_process = psutil.Process(pid)
+            children = current_process.children(recursive=True)            
+            os.kill(pid, 9)
+            for child in children:
+                print('Child pid is {}'.format(child.pid))
+                os.kill(child.pid, 9)
+            pid = 0
+        except Exception as ex:
+            print(ex)
+            response = json_util.dumps({'status': False, 'message':ex})
+            return Response(response, mimetype='application/json')
+        response = json_util.dumps({'status': True, 'message':'Đã dừng quá trình cập nhật!'})
+        return Response(response, mimetype='application/json')
+    response = json_util.dumps({'status': False, 'message':'Không có quá trình cập nhật nào!'})
+    return Response(response, mimetype='application/json')
 if __name__ == "__main__":
     app.run(debug=True)
