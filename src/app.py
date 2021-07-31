@@ -27,7 +27,6 @@ dbUrl = "mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/sa
 dbName = "satellite"
 collName = "full"
 header= ["Official Name","NORAD Number","Nation","Operator","Users","Application","Detailed Purpose","Orbit","Class of Orbit","Type of Orbit","Period (minutes)","Mass (kg)","COSPAR Number","Date of Launch","Expected Lifetime (yrs)","Equipment","Describe"]
-pid = 0
 app = Flask(__name__)
 # app.config["MONGO_URI"] = 'mongodb://localhost:27017/flaskDB'
 CORS(app)
@@ -149,53 +148,32 @@ def satellite_track_all():
             'message': 'error'
         })
 
-count = 0 # Biến đếm số bản ghi, sử dụng ở phạm vi GLOBAL
-def mongoImport(csvPath, dbName=dbName, collName=collName, dbUrl=dbUrl):
-    """ Imports a csv file at path csvPath to a mongo collection
-    returns: count of the documents in the new collection
-    """
-    client = MongoClient(dbUrl, ssl=True, ssl_cert_reqs='CERT_NONE')
-    db = client[dbName]
-    coll = db[collName]
-    csvFile = open(csvPath)
-    reader = csv.DictReader(csvFile)
-    global count # Khai báo sử dụng biến global
-    for each in reader:
-        row={}
-        for field in header:
-            row[field]= " ".join(each[field].split())
-        print(row)
-        coll.insert(row)
-        count+=1
-
-
 @app.route('/satellites/update-database', methods=['POST'])
 def update_database():
     global pid
+    count = 0
     if pid == 0:
-        try:        
-            global count # Khai báo sử dụng biến global
-            count = 0
+        try:
             process = subprocess.Popen('python update_db.py')
             pid = process.pid            
             print(pid)
             stdout, stderr = process.communicate()
-            if (stderr != None):
-                raise Exception
-            # process.wait()            
-            mongoImport(csvPath='updated_data.csv')
+            if (stdout == None): # Nếu stdout == None chứng tỏ tiến trình crawl bị dừng bỏi yêu cầu từ client
+                raise Exception 
+            pid = 0
+            count = int(stdout)
         except Exception as ex:
-            if (stderr != None):                
+            if (stderr != None): # Nếu stderr != None chứng tỏ tiến trình crawl bị lỗi
                 print(stderr)
                 errMess = base64.b64encode(stderr).decode('utf-8')
             else:
-                errMess = ex
+                errMess = str(ex)
             print(errMess)
             response = json_util.dumps({'status': False, 'count': count, 'message':errMess})
             return Response(response, mimetype='application/json')
         response = json_util.dumps({'status': True, 'count': count, 'message':''})
         return Response(response, mimetype='application/json')
-    response = json_util.dumps({'status': False, 'count': count, 'message':'Đang cập nhật!'})
+    response = json_util.dumps({'status': False, 'count': count, 'message':'Cập nhật thành công!'})
     return Response(response, mimetype='application/json')
 
 @app.route('/satellites/stop-update-database', methods=['POST'])

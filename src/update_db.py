@@ -9,14 +9,35 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support.ui import WebDriverWait
 import csv
 import urllib.request
+from pymongo import MongoClient
 url = 'http://celestrak.com/NORAD/elements/active.txt' # Satellite Database online
+dbUrl = "mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/satellite?retryWrites=true&w=majority"
+dbName = "satellite"
+collName = "full"
 timeout = 30
 def findByXpath(driver, xpath):
     return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath))).text
 # Chuẩn hóa chuỗi ký tự (bỏ các ký tự thừa: \n, \t, "  ")
 def nomalizeString(str):
     return " ".join(str.split())
-
+def mongoImport(csvPath, dbName=dbName, collName=collName, dbUrl=dbUrl):
+    """ Imports a csv file at path csvPath to a mongo collection
+    returns: count of the documents in the new collection
+    """
+    client = MongoClient(dbUrl, ssl=True, ssl_cert_reqs='CERT_NONE')
+    db = client[dbName]
+    coll = db[collName]
+    csvFile = open(csvPath)
+    reader = csv.DictReader(csvFile)
+    count = 0 # Khai báo sử dụng biến global
+    for each in reader:
+        row={}
+        for field in header:
+            row[field]= " ".join(each[field].split())
+        print(row)
+        coll.insert(row)
+        count+=1
+    return count
 options = webdriver.ChromeOptions()
 options.add_argument('--headless')
 options.add_argument('--no-sandbox')
@@ -30,7 +51,9 @@ writer = csv.writer(csvFile) # công cụ ghi file csv
 emptyRowCSV = [""] * 17  # Dòng dữ liệu trống dùng làm mẫu
 listID=[]
 # Dòng tên trường
-header= ["Official Name","NORAD Number","Nation","Operator","Users","Application","Detailed Purpose","Orbit","Class of Orbit","Type of Orbit","Period (minutes)","Mass (kg)","COSPAR Number","Date of Launch","Expected Lifetime (yrs)","Equipment","Describe"]
+header= ["Official Name","NORAD Number","Nation","Operator","Users","Application",
+"Detailed Purpose","Orbit","Class of Orbit","Type of Orbit","Period (minutes)","Mass (kg)",
+"COSPAR Number","Date of Launch","Expected Lifetime (yrs)","Equipment","Describe"]
 writer.writerow(header)
 for i in range(2,max_row+1):
     value_id = sheet.cell(i, 2).value
@@ -116,7 +139,7 @@ for i in range(2, len(list_content),3):
                 except NoSuchElementException:
                     print("NoSuch")
                 except TimeoutException:
-                    continue            
+                    continue
         writer.writerow(row)
-print('Successfully crawl new Satellite')
 driver.close()
+print(mongoImport(csvPath='updated_data.csv'))
