@@ -138,6 +138,7 @@ for i in range(2, len(list_content),3):
                     row[16] = nomalizeString(infor)
                 except NoSuchElementException:
                     print("NoSuch")
+                    continue
                 except TimeoutException:
                     continue
         writer.writerow(row)

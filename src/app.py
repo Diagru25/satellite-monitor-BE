@@ -171,9 +171,9 @@ def update_database():
             print(errMess)
             response = json_util.dumps({'status': False, 'count': count, 'message':errMess})
             return Response(response, mimetype='application/json')
-        response = json_util.dumps({'status': True, 'count': count, 'message':''})
+        response = json_util.dumps({'status': True, 'count': count, 'message':'Cập nhật thành công!'})
         return Response(response, mimetype='application/json')
-    response = json_util.dumps({'status': False, 'count': count, 'message':'Cập nhật thành công!'})
+    response = json_util.dumps({'status': True, 'count': count, 'message':'Đã là bản cập nhật mới nhất!'})
     return Response(response, mimetype='application/json')
 
 @app.route('/satellites/stop-update-database', methods=['POST'])
@@ -190,8 +190,8 @@ def stop_update_database():
                 os.kill(child.pid, 9)
             pid = 0
         except Exception as ex:
-            print(ex)
-            response = json_util.dumps({'status': False, 'message':ex})
+            print(str(ex))
+            response = json_util.dumps({'status': False, 'message':'Lỗi dừng cập nhật: ' + str(ex)})
             return Response(response, mimetype='application/json')
         response = json_util.dumps({'status': True, 'message':'Đã dừng quá trình cập nhật!'})
         return Response(response, mimetype='application/json')
