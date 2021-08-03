@@ -14,7 +14,7 @@ url = 'http://celestrak.com/NORAD/elements/active.txt' # Satellite Database onli
 dbUrl = "mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/satellite?retryWrites=true&w=majority"
 dbName = "satellite"
 collName = "full"
-timeout = 30
+timeout = 40
 def findByXpath(driver, xpath):
     return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath))).text
 # Chuẩn hóa chuỗi ký tự (bỏ các ký tự thừa: \n, \t, "  ")
@@ -61,19 +61,17 @@ for i in range(2,max_row+1):
 # f = open('data.txt'); list_content=f.readlines()
 local_filename, headers = urllib.request.urlretrieve(url,filename="..\\data.txt",)
 f = open(local_filename, encoding="utf-8")
-list_content=f.readlines() 
+list_content=f.readlines()
 for i in range(2, len(list_content),3):
     id_str=list_content[i][2:7]
     id_int=int(id_str)
     row = emptyRowCSV.copy() # Tạo bản ghi dữ liệu mới (dòng mới)
     if id_int==45123 or id_int==45125:
         continue
-    try:
-        a=listID.index(id_int)
-    except ValueError:
+    if id_int not in listID:
         print(id_int)
         row[1] = int(id_int)
-        row[0]=nomalizeString(list_content[i-2])
+        row[0] = nomalizeString(list_content[i - 2])
         if list_content[i-2][0:2] == '20':  # in case of name_satellite starting by 2021
             try:
                 print("n2yo")
@@ -85,7 +83,7 @@ for i in range(2, len(list_content),3):
                 try:
                     infor_stl = findByXpath(driver,
                         "/html/body/table[@id='tabsatellite']/tbody/tr/td[2]/div[@id='satinfo']").splitlines()
-                except TimeoutException:
+                except (TimeoutException, NoSuchElementException):
                     print('TimeoutException')
                     continue
                 name_stl = infor_stl[0][::]
@@ -110,9 +108,9 @@ for i in range(2, len(list_content),3):
                 element.send_keys('site:space.skyrocket.de ' + f'{list_content[i-2]}')  # search in space.skyrocket.de
                 element.submit()
             except exceptions.StaleElementReferenceException:
-                result = driver.find_element_by_tag_name('h3')  # click on first result
-                result.click()
                 try:
+                    result = driver.find_element_by_tag_name('h3')  # click on first result
+                    result.click()
                     infor = findByXpath(driver,"/html/body/div[@class='page_bg']/div[@class='container']/div/div[@id='satdescription']/p[1]")
                     nat_stl = findByXpath(driver,
                         "/html/body/div[@class='page_bg']/div[@class='container']/div/table[@id='satdata']/tbody/tr[1]/td[@id='sdnat']")
@@ -136,10 +134,7 @@ for i in range(2, len(list_content),3):
                     row[14] = nomalizeString(lif_stl)
                     row[15] = nomalizeString(equ_stl)
                     row[16] = nomalizeString(infor)
-                except NoSuchElementException:
-                    print("NoSuch")
-                    continue
-                except TimeoutException:
+                except (TimeoutException, NoSuchElementException):
                     continue
         writer.writerow(row)
 driver.close()
