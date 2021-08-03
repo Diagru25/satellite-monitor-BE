@@ -14,19 +14,20 @@ url = 'http://celestrak.com/NORAD/elements/active.txt' # Satellite Database onli
 dbUrl = "mongodb+srv://satelliteV10:7FgUH3CrGH21@satellite0.fvo32.mongodb.net/satellite?retryWrites=true&w=majority"
 dbName = "satellite"
 collName = "full"
+client = MongoClient(dbUrl, ssl=True, ssl_cert_reqs='CERT_NONE')
+db = client[dbName]
+coll = db[collName]
 timeout = 40
 def findByXpath(driver, xpath):
     return WebDriverWait(driver, timeout).until(EC.presence_of_element_located((By.XPATH, xpath))).text
 # Chuẩn hóa chuỗi ký tự (bỏ các ký tự thừa: \n, \t, "  ")
 def nomalizeString(str):
     return " ".join(str.split())
-def mongoImport(csvPath, dbName=dbName, collName=collName, dbUrl=dbUrl):
+def mongoImport(csvPath):
     """ Imports a csv file at path csvPath to a mongo collection
     returns: count of the documents in the new collection
     """
-    client = MongoClient(dbUrl, ssl=True, ssl_cert_reqs='CERT_NONE')
-    db = client[dbName]
-    coll = db[collName]
+    global coll # collection
     csvFile = open(csvPath)
     reader = csv.DictReader(csvFile)
     count = 0 # Khai báo sử dụng biến global
@@ -68,8 +69,8 @@ for i in range(2, len(list_content),3):
     row = emptyRowCSV.copy() # Tạo bản ghi dữ liệu mới (dòng mới)
     if id_int==45123 or id_int==45125:
         continue
-    if id_int not in listID:
-        print(id_int)
+    if id_int not in listID: # coll.find_one({'NORAD Number': id_int}) == None
+        print('New statellite:', id_int)
         row[1] = int(id_int)
         row[0] = nomalizeString(list_content[i - 2])
         if list_content[i-2][0:2] == '20':  # in case of name_satellite starting by 2021
