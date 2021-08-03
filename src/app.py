@@ -32,7 +32,7 @@ app = Flask(__name__)
 CORS(app)
 client = MongoClient(dbUrl, ssl=True, ssl_cert_reqs='CERT_NONE')
 mongo = client.get_database(dbName)
-
+# geopy.geocoders.options.default_timeout = 7
 
 @app.route('/satellites', methods=['GET'])
 def get_all_satellites():
@@ -52,10 +52,26 @@ def get_one_satellite(id):
 #     satellites = mongo.full
 #     response = json_util.dumps(satellites.find_one({'Official Name': name}))
 #     return Response(response, mimetype='application/json')
-
+# def reverseLocator(r):
+#     locator = Nominatim(user_agent='myGeocoder')
+#     coor = (Point( r["coordinate"]['lat'],r["coordinate"]['long']))
+#     print(coor)
+#     try:
+#         location = locator.reverse(coor)
+#         print(location.address)
+#         location_vi = GoogleTranslator(source='auto', target='vi').translate(location.address)
+#         if location_vi != None:
+#             r["coordinate"]["location"] = location_vi
+#         else:
+#             r["coordinate"]["location"] = location.address
+#     except Exception as e:
+#         print(str(e))
+#         return r
+#     print(r["coordinate"]["location"])
+#     return r
 @app.route('/satellites/track-all', methods=['POST'])
 def satellite_track_all():
-    # geopy.geocoders.options.default_timeout = 7
+    
     try:
         url = 'http://celestrak.com/NORAD/elements/active.txt'
         file = urllib.request.urlopen(url).read().splitlines()
@@ -98,38 +114,19 @@ def satellite_track_all():
                             obs.date = x
                             stl.compute(obs)
                             trvn = ephem.Date(x + 7 * ephem.hour)
-                            # locator = Nominatim(user_agent='myGeocoder')
-                            # coor = (Point( math.degrees(stl.sublat),math.degrees(stl.sublong)))
-                            # location = locator.reverse(coor)                            
+                                                
                             str_trvn = "%s" % (trvn)
-                            # print(location)
-                            try:
-                                # location_vi = GoogleTranslator(source='auto', target='vi').translate(location.address)
-                                # if location == None:
-                                #     raise AttributeError
-                                coordinates.append({
-                                    "id": id_int,
-                                    "trvn": str_trvn,
-                                    "alt": math.degrees(stl.alt),
-                                    "az": math.degrees(stl.az),
-                                    "lat": math.degrees(stl.sublat),
-                                    "long": math.degrees(stl.sublong),
-                                    "elevation": stl.elevation / 1000,
-                                    "range": stl.range / 1000,
-                                    # "location": location_vi
-                                })
-                            except AttributeError:
-                                coordinates.append({
-                                    "id": id_int,
-                                    "trvn": str_trvn,
-                                    "alt": math.degrees(stl.alt),
-                                    "az": math.degrees(stl.az),
-                                    "lat": math.degrees(stl.sublat),
-                                    "long": math.degrees(stl.sublong),
-                                    "elevation": stl.elevation / 1000,
-                                    "range": stl.range / 1000,
-                                    "location": ""
-                                })
+                            coordinates.append({
+                                "id": id_int,
+                                "trvn": str_trvn,
+                                "alt": math.degrees(stl.alt),
+                                "az": math.degrees(stl.az),
+                                "lat": math.degrees(stl.sublat),
+                                "long": math.degrees(stl.sublong),
+                                "elevation": stl.elevation / 1000,
+                                "range": stl.range / 1000,
+                                "location": ''
+                            })
                         result.append({
                             "name": name_sate,
                             "coordinate": coordinates
@@ -137,13 +134,13 @@ def satellite_track_all():
                     else:
                         obs.date = ts
             except  Exception as e:
-                print(e)
+                print(str(e))
                 continue
         response = json_util.dumps(result)
         return Response(response, mimetype='application/json')
 
     except Exception as e:
-        print(e)
+        print(str(e))
         return json_util.dumps({
             'message': 'error'
         })
