@@ -170,7 +170,7 @@ def update_database():
             return Response(response, mimetype='application/json')
         response = json_util.dumps({'status': True, 'count': count, 'message':'Cập nhật thành công!'})
         return Response(response, mimetype='application/json')
-    response = json_util.dumps({'status': True, 'count': count, 'message':'Đã là bản cập nhật mới nhất!'})
+    response = json_util.dumps({'status': False, 'count': count, 'message':'Đang cập nhật từ máy khác!'})
     return Response(response, mimetype='application/json')
 
 @app.route('/satellites/stop-update-database', methods=['POST'])
